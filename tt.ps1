@@ -72,7 +72,8 @@ using namespace Windows.Graphics.Imaging
 
   # Auto language detection: $ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
   $languageTag = $comboBox.SelectedItem
-  $ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($languageTag)
+  $language = New-Object Windows.Globalization.Language($languageTag)
+  $ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($language)
 
 Function OCRCapture {
   Write-Host ('*'*40)
