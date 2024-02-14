@@ -1,79 +1,78 @@
 using namespace Windows.Graphics.Imaging
 
-  # Make sure all required assemblies are loaded before any class definitions use them
-  Add-Type -AssemblyName System.Windows.Forms, System.Drawing, System.Runtime.WindowsRuntime
-    
-  # WinRT assemblies are loaded indirectly
-  $null = [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
-  $null = [Windows.Foundation.IAsyncOperation`1, Windows.Foundation, ContentType = WindowsRuntime]
-  $null = [Windows.Graphics.Imaging.SoftwareBitmap, Windows.Foundation, ContentType = WindowsRuntime]
-  $null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation, ContentType = WindowsRuntime]
-  $null = [Windows.Storage.Streams.RandomAccessStream, Windows.Storage.Streams, ContentType = WindowsRuntime]
-    
-  # Some WinRT assemblies such as [Windows.Globalization.Language] are loaded indirectly by returning the object types
-  $null = [Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages
+# Make sure all required assemblies are loaded before any class definitions use them
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing, System.Runtime.WindowsRuntime
 
-  #Windows.Forms
-  [Windows.Forms.Application]::EnableVisualStyles()
+# WinRT assemblies are loaded indirectly
+$null = [Windows.Media.Ocr.OcrEngine, Windows.Foundation, ContentType = WindowsRuntime]
+$null = [Windows.Foundation.IAsyncOperation`1, Windows.Foundation, ContentType = WindowsRuntime]
+$null = [Windows.Graphics.Imaging.SoftwareBitmap, Windows.Foundation, ContentType = WindowsRuntime]
+$null = [Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation, ContentType = WindowsRuntime]
+$null = [Windows.Storage.Streams.RandomAccessStream, Windows.Storage.Streams, ContentType = WindowsRuntime]
 
-  # Find the awaiter method
-  $getAwaiterBaseMethod = [WindowsRuntimeSystemExtensions].GetMember('GetAwaiter').
-  Where({$PSItem.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'}, 'First')[0]
+# Some WinRT assemblies such as [Windows.Globalization.Language] are loaded indirectly by returning the object types
+$null = [Windows.Media.Ocr.OcrEngine]::AvailableRecognizerLanguages
 
-  # Define awaiter function
-  Function Await {
+#Windows.Forms
+[Windows.Forms.Application]::EnableVisualStyles()
+
+# Find the awaiter method
+$getAwaiterBaseMethod = [WindowsRuntimeSystemExtensions].GetMember('GetAwaiter').
+Where({$PSItem.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'}, 'First')[0]
+
+# Define awaiter function
+Function Await {
     param($AsyncTask, $ResultType)
     $getAwaiterBaseMethod.
-        MakeGenericMethod($ResultType).
-        Invoke($null, @($AsyncTask)).
-        GetResult()
-  }
+    MakeGenericMethod($ResultType).
+    Invoke($null, @($AsyncTask)).
+    GetResult()
+}
 
-  # Create form window
-  $form = New-Object Windows.Forms.Form
-  $form.Text = 'OCR Capture'
-  $form.Width = 420
-  $form.Height = 320
-  $form.AutoSize = $true
-  # Create resizeable rich textbox
-  $textBox = New-Object Windows.Forms.RichTextBox
-  $textBox.Multiline = $true
-  $textBox.ScrollBars = [Windows.Forms.ScrollBars]::Both
-  $textBox.WordWrap = $true
-  $textBox.AcceptsTab = $true
-  $textBox.Dock = [Windows.Forms.DockStyle]::Fill
-  $textBox.Font = New-Object System.Drawing.Font('Segoe UI', 12)
-  $textBox.Text = 'Scanned text will appear here.'
-  $form.Controls.Add($textBox)
-  # Make menu strip
-  $menu = New-Object Windows.Forms.MenuStrip
-  $captureButton = New-Object Windows.Forms.ToolStripMenuItem
-  $captureButton.Text = 'Capture'
+# Create form window
+$form = New-Object Windows.Forms.Form
+$form.Text = 'OCR Capture'
+$form.Width = 420
+$form.Height = 320
+$form.AutoSize = $true
 
-  $copyButton = New-Object Windows.Forms.ToolStripMenuItem
-  $copyButton.Text = 'Copy'
+# Create resizeable rich textbox
+$textBox = New-Object Windows.Forms.RichTextBox
+$textBox.Multiline = $true
+$textBox.ScrollBars = [Windows.Forms.ScrollBars]::Both
+$textBox.WordWrap = $true
+$textBox.AcceptsTab = $true
+$textBox.Dock = [Windows.Forms.DockStyle]::Fill
+$textBox.Font = New-Object System.Drawing.Font('Segoe UI', 12)
+$textBox.Text = 'Scanned text will appear here.'
+$form.Controls.Add($textBox)
 
-  # Create ComboBox
-  $comboBox = New-Object Windows.Forms.ToolStripComboBox
-  $comboBox.Items.AddRange(@('ja-JP', 'en-US', 'zh-CH'))
-  $comboBox.SelectedIndex = 0
-  $comboBox.add_SelectedIndexChanged({
-    # When language selection changes
-    switch ($comboBox.SelectedItem) {
-      'ja-JP'  { "'ja-JP'" }
-      'en-US'  { "'en-US'" }
-      'zh-CH'  { "'zh-CH'" }
-    }
-  })
-  $menu.Items.Add($captureButton)
-  $menu.Items.Add($copyButton)
-  $menu.Items.Add($comboBox)
-  $form.Controls.Add($menu)
+# Make menu strip
+$menu = New-Object Windows.Forms.MenuStrip
+$captureButton = New-Object Windows.Forms.ToolStripMenuItem
+$captureButton.Text = 'Capture'
 
-  # Auto language detection: $ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromUserProfileLanguages()
-  $languageTag = $comboBox.SelectedItem
-  $language = New-Object Windows.Globalization.Language($languageTag)
-  $ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($language)
+$copyButton = New-Object Windows.Forms.ToolStripMenuItem
+$copyButton.Text = 'Copy'
+
+# Create ComboBox
+$comboBox = New-Object Windows.Forms.ToolStripComboBox
+$comboBox.Items.AddRange(@('ja-JP', 'en-US', 'zh-CH'))
+$comboBox.SelectedIndex = 0
+
+# Define the event handler delegate
+$comboBox_TextChanged = {
+    $languageTag = $comboBox.SelectedItem.ToString()
+    $global:ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($languageTag)
+}
+
+# Attach the event handler delegate to the TextChanged event
+$comboBox.add_TextChanged($comboBox_TextChanged)
+
+$menu.Items.Add($captureButton)
+$menu.Items.Add($copyButton)
+$menu.Items.Add($comboBox)
+$form.Controls.Add($menu)
 
 Function OCRCapture {
   Write-Host ('*'*40)
