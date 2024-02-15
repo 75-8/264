@@ -55,14 +55,31 @@ $captureButton.Text = 'Capture'
 $copyButton = New-Object Windows.Forms.ToolStripMenuItem
 $copyButton.Text = 'Copy'
 
+# Create a hashtable to map Japanese names to their language tags
+$languageNameMap = @{
+    '言語選択' = 'none'
+    '日本語' = 'ja-JP'
+    '英語' = 'en-US'
+    '中国語' = 'zh-CN'
+}
+
+# Create an ArrayList to store the sorted Japanese names
+$sortedLanguageNames = New-Object System.Collections.ArrayList
+$sortedLanguageNames.AddRange(@('言語選択', '日本語', '英語', '中国語'))
+
 # Create ComboBox
 $comboBox = New-Object Windows.Forms.ToolStripComboBox
-$comboBox.Items.AddRange(@('ja-JP', 'en-US', 'zh-CH'))
+$comboBox.Items.AddRange($sortedLanguageNames)
 $comboBox.SelectedIndex = 0
+
+# Get the language tag from the selected Japanese name
+$languageTag = $languageNameMap[$comboBox.SelectedItem]
+
+$ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($languageTag)
 
 # Define the event handler delegate
 $comboBox_TextChanged = {
-    $languageTag = $comboBox.SelectedItem.ToString()
+    $languageTag = $languageNameMap[$comboBox.SelectedItem]
     $global:ocrEngine = [Windows.Media.Ocr.OcrEngine]::TryCreateFromLanguage($languageTag)
 }
 
